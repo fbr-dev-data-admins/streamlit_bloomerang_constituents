@@ -16,6 +16,15 @@ from transformations.organizations import transform_organizations
 from transformations.exceptions import create_exceptions_dataframe
 from utils.excel_writer import df_to_excel_bytes
 
+import streamlit as st
+
+# Temporary debug — remove after confirming
+try:
+    key = st.secrets.get("BLOOMERANG_API_KEY")
+    st.write("Key found:", bool(key), "| First 6 chars:", str(key)[:6] if key else "None")
+except Exception as e:
+    st.write("st.secrets error:", e)
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
