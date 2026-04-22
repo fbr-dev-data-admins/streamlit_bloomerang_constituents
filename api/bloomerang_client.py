@@ -152,28 +152,24 @@ class BloomerangClient:
             for record in results:
                 audit_trail = record.get("AuditTrail", {})
                 created_date_str = audit_trail.get("CreatedDate")
-
+            
                 if not created_date_str:
-                    logger.warning(
-                        f"Constituent {record.get('Id')} missing CreatedDate, skipping"
-                    )
+                    logger.warning(f"Constituent {record.get('Id')} missing CreatedDate, skipping")
                     continue
-
+            
                 try:
                     created_dt = datetime.fromisoformat(created_date_str.replace("Z", "+00:00"))
                     created_date_only = created_dt.date()
                 except ValueError as e:
-                    logger.warning(
-                        f"Could not parse CreatedDate '{created_date_str}' for constituent {record.get('Id')}: {e}"
-                    )
+                    logger.warning(f"Could not parse CreatedDate '{created_date_str}' for constituent {record.get('Id')}: {e}")
                     continue
-
-                if created_date_only < start_date:
-                    continue
+            
+                if created_date_only > end_date:
+                    continue  # too recent, skip but keep paging
                 elif start_date <= created_date_only <= end_date:
                     collected.append(record)
                 else:
-                    should_stop = True
+                    should_stop = True  # older than start_date, stop
                     break
 
             if should_stop:
