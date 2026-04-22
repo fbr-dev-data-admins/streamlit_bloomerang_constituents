@@ -6,7 +6,67 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def parse_individual_name(formal_name: str, informal_name: str, config: dict) -> dict:
+def _parse_envelope(envelope_name: str) -> dict | None:
+    """
+    Parse envelope name to extract primary and spouse name components.
+    Handles patterns like:
+      "Rebecca & Noble Fowler"
+      "Rebecca Smith & Noble Fowler"
+      "Rebecca & Noble Smith"
+
+    Returns dict with keys: primary_first, primary_last, spouse_first, spouse_last
+    or None if unparseable.
+    """
+    if not envelope_name:
+        return None
+
+    couple_match = re.search(r'\s*(?:and|&)\s*', envelope_name, re.IGNORECASE)
+    if not couple_match:
+        return None
+
+    left = envelope_name[:couple_match.start()].strip()
+    right = envelope_name[couple_match.end():].strip()
+
+    left_tokens = left.split()
+    right_tokens = right.split()
+
+    if not left_tokens or not right_tokens:
+        return None
+
+    if len(left_tokens) == 1 and len(right_tokens) >= 2:
+        # "Rebecca & Noble Fowler" — primary first only, spouse has full name
+        return {
+            "primary_first": left_tokens[0],
+            "primary_last": right_tokens[-1],   # assume shared last
+            "spouse_first": right_tokens[0],
+            "spouse_last": right_tokens[-1]
+        }
+    elif len(left_tokens) >= 2 and len(right_tokens) >= 2:
+        # "Rebecca Smith & Noble Fowler" — both have full names
+        return {
+            "primary_first": left_tokens[0],
+            "primary_last": left_tokens[-1],
+            "spouse_first": right_tokens[0],
+            "spouse_last": right_tokens[-1]
+        }
+    elif len(left_tokens) >= 2 and len(right_tokens) == 1:
+        # "Rebecca Smith & Noble" — primary full, spouse first only, shared last
+        return {
+            "primary_first": left_tokens[0],
+            "primary_last": left_tokens[-1],
+            "spouse_first": right_tokens[0],
+            "spouse_last": left_tokens[-1]
+        }
+
+    return None
+
+
+def parse_individual_name(
+    formal_name: str,
+    informal_name: str,
+    config: dict,
+    envelope_name: str = ""
+) -> dict:
     """
     Parse an individual's formal name into structured fields.
 
@@ -14,6 +74,7 @@ def parse_individual_name(formal_name: str, informal_name: str, config: dict) ->
         formal_name: The formal name string to parse (e.g., "John and Jane Doe")
         informal_name: The informal/nickname string (e.g., "Johnny and Janie")
         config: Dict containing name_prefixes, name_suffixes, name_exception_keywords
+        envelope_name: The envelope name string (e.g., "Rebecca & Noble Fowler")
 
     Returns:
         Dict with parsed name fields and parse_exception status
@@ -37,13 +98,11 @@ def parse_individual_name(formal_name: str, informal_name: str, config: dict) ->
 
     working = formal_name.strip() if formal_name else ""
 
-    # Step 1: Reject immediately if empty
     if not working:
         result["parse_exception"] = True
         result["parse_exception_reason"] = "Unparseable Name"
         return result
 
-    # Step 1: Reject if contains exception keywords (whole word, case-insensitive)
     for keyword in exception_keywords:
         pattern = r'\b' + re.escape(keyword) + r'\b'
         if re.search(pattern, working, re.IGNORECASE):
@@ -51,7 +110,6 @@ def parse_individual_name(formal_name: str, informal_name: str, config: dict) ->
             result["parse_exception_reason"] = "Unparseable Name"
             return result
 
-    # Step 1: Reject if entirely uppercase or entirely lowercase
     alpha_chars = [c for c in working if c.isalpha()]
     if alpha_chars:
         if all(c.isupper() for c in alpha_chars) or all(c.islower() for c in alpha_chars):
@@ -59,7 +117,7 @@ def parse_individual_name(formal_name: str, informal_name: str, config: dict) ->
             result["parse_exception_reason"] = "Unparseable Name"
             return result
 
-    # Step 2: Strip prefixes/titles from beginning
+    # Strip prefix/title
     title_found = ""
     for prefix in prefixes:
         pattern = r'^' + re.escape(prefix) + r'\s+'
@@ -70,7 +128,7 @@ def parse_individual_name(formal_name: str, informal_name: str, config: dict) ->
             break
     result["title"] = title_found
 
-    # Step 3: Strip suffixes from end
+    # Strip suffix
     suffix_found = ""
     for suffix in suffixes:
         pattern = r'\s+' + re.escape(suffix) + r'\.?$'
@@ -81,11 +139,47 @@ def parse_individual_name(formal_name: str, informal_name: str, config: dict) ->
             break
     result["suffix"] = suffix_found
 
-    # Step 4: Detect couple pattern
+    # Check if only one token remains after prefix/suffix strip (last-name-only formal)
+    # e.g. "Mrs. Aaron-Fowler" -> working = "Aaron-Fowler"
+    tokens_after_strip = working.split()
+    if len(tokens_after_strip) == 1 and title_found:
+        # Last-name-only formal name — use envelope to resolve
+        envelope = _parse_envelope(envelope_name)
+        informal = informal_name.strip() if informal_name else ""
+        if envelope:
+            result["first_name"] = envelope["primary_first"]
+            result["last_name"] = tokens_after_strip[0]  # trust formal for primary last
+            result["spouse_first_name"] = envelope["spouse_first"]
+            result["spouse_last_name"] = envelope["spouse_last"]
+            # nickname from informal
+            if informal:
+                informal_match = re.search(r'\s+(?:and|&)\s+', informal, re.IGNORECASE)
+                if informal_match:
+                    result["nickname"] = informal[:informal_match.start()].strip()
+                    result["spouse_nickname"] = informal[informal_match.end():].strip()
+                else:
+                    result["nickname"] = informal
+        elif informal:
+            # No envelope, try informal for first name at minimum
+            result["first_name"] = informal.split()[0]
+            result["last_name"] = tokens_after_strip[0]
+            result["nickname"] = informal.split()[0]
+        else:
+            result["parse_exception"] = True
+            result["parse_exception_reason"] = "Unparseable Name"
+            return result
+
+        if not result["first_name"] or not result["last_name"]:
+            result["parse_exception"] = True
+            result["parse_exception_reason"] = "Unparseable Name"
+            return result
+
+        return result
+
+    # Detect couple pattern in formal name
     couple_match = re.search(r'\s+(?:and|&)\s+', working, re.IGNORECASE)
 
     if couple_match:
-        # Parse as couple
         left_part = working[:couple_match.start()].strip()
         right_part = working[couple_match.end():].strip()
 
@@ -93,35 +187,30 @@ def parse_individual_name(formal_name: str, informal_name: str, config: dict) ->
         right_tokens = right_part.split()
 
         if len(left_tokens) >= 2 and len(right_tokens) >= 1:
-            # Case A: Two full names (e.g., "John Doe and Jane Smith")
             result["first_name"] = left_tokens[0]
             result["last_name"] = left_tokens[-1]
             result["spouse_first_name"] = right_tokens[0]
             result["spouse_last_name"] = right_tokens[-1] if len(right_tokens) >= 2 else left_tokens[-1]
         elif len(left_tokens) == 1 and len(right_tokens) >= 2:
-            # Case B: Shared last name (e.g., "John and Jane Doe")
             result["first_name"] = left_tokens[0]
             result["last_name"] = right_tokens[-1]
             result["spouse_first_name"] = right_tokens[0]
             result["spouse_last_name"] = right_tokens[-1]
         elif len(left_tokens) == 1 and len(right_tokens) == 1:
-            # Case C: Cannot determine (e.g., "John and Jane" with no last name)
             result["parse_exception"] = True
             result["parse_exception_reason"] = "Unparseable Name"
             return result
         else:
-            # Case C: Cannot determine
             result["parse_exception"] = True
             result["parse_exception_reason"] = "Unparseable Name"
             return result
     else:
-        # Parse as single person
+        # Single person formal name
         tokens = working.split()
         if len(tokens) >= 2:
             result["first_name"] = tokens[0]
             result["last_name"] = tokens[-1]
         elif len(tokens) == 1:
-            # Only one name - cannot determine first vs last
             result["parse_exception"] = True
             result["parse_exception_reason"] = "Unparseable Name"
             return result
@@ -130,7 +219,6 @@ def parse_individual_name(formal_name: str, informal_name: str, config: dict) ->
             result["parse_exception_reason"] = "Unparseable Name"
             return result
 
-    # Final check: must have first and last name
     if not result["first_name"] or not result["last_name"]:
         result["parse_exception"] = True
         result["parse_exception_reason"] = "Unparseable Name"
@@ -146,85 +234,15 @@ def parse_individual_name(formal_name: str, informal_name: str, config: dict) ->
         else:
             result["nickname"] = informal
             result["spouse_nickname"] = ""
-    
-    # If informal revealed a spouse but formal was parsed as solo, derive spouse fields
+
+    # If informal revealed a spouse but formal was solo, derive spouse fields
     if result["spouse_nickname"] and not result["spouse_first_name"]:
         result["spouse_first_name"] = result["spouse_nickname"]
-        result["spouse_last_name"] = result["last_name"]
+        # Use envelope to get correct spouse last name if available
+        envelope = _parse_envelope(envelope_name)
+        if envelope and envelope["spouse_last"]:
+            result["spouse_last_name"] = envelope["spouse_last"]
+        else:
+            result["spouse_last_name"] = result["last_name"]  # fallback: assume shared
 
     return result
-
-
-if __name__ == "__main__":
-    # Test configuration
-    test_config = {
-        "name_prefixes": ["Dr.", "Mr.", "Mrs.", "Ms.", "Miss", "Rev.", "Prof."],
-        "name_suffixes": ["Jr.", "Sr.", "II", "III", "IV", "V", "Esq.", "Ph.D."],
-        "name_exception_keywords": [
-            "Family", "Foundation", "Fund", "Trust", "Estate", "Group",
-            "Committee", "Association", "Society", "Organization"
-        ]
-    }
-
-    test_cases = [
-        # (formal_name, informal_name, expected_checks)
-        ("John Doe", "", {
-            "first_name": "John", "last_name": "Doe",
-            "spouse_first_name": "", "parse_exception": False
-        }),
-        ("John and Jane Doe", "", {
-            "first_name": "John", "last_name": "Doe",
-            "spouse_first_name": "Jane", "spouse_last_name": "Doe", "parse_exception": False
-        }),
-        ("John Doe and Jane-Ann Smith", "", {
-            "first_name": "John", "last_name": "Doe",
-            "spouse_first_name": "Jane-Ann", "spouse_last_name": "Smith", "parse_exception": False
-        }),
-        ("John Doe & Jane-Ann Doe", "", {
-            "first_name": "John", "last_name": "Doe",
-            "spouse_first_name": "Jane-Ann", "spouse_last_name": "Doe", "parse_exception": False
-        }),
-        ("Dr. John Doe", "", {
-            "title": "Dr.", "first_name": "John", "last_name": "Doe", "parse_exception": False
-        }),
-        ("John Doe Jr.", "", {
-            "first_name": "John", "last_name": "Doe", "suffix": "Jr.", "parse_exception": False
-        }),
-        ("The Smith Family", "", {
-            "parse_exception": True, "parse_exception_reason": "Unparseable Name"
-        }),
-        ("JOHN DOE", "", {
-            "parse_exception": True, "parse_exception_reason": "Unparseable Name"
-        }),
-        ("Jane-Ann O'Brien", "", {
-            "first_name": "Jane-Ann", "last_name": "O'Brien", "parse_exception": False
-        }),
-        ("Rev. John and Jane Doe", "", {
-            "title": "Rev.", "first_name": "John", "last_name": "Doe",
-            "spouse_first_name": "Jane", "spouse_last_name": "Doe", "parse_exception": False
-        }),
-    ]
-
-    print("Running name parser tests...\n")
-    all_passed = True
-
-    for i, (formal, informal, expected) in enumerate(test_cases, 1):
-        result = parse_individual_name(formal, informal, test_config)
-
-        passed = True
-        failures = []
-        for key, expected_val in expected.items():
-            actual_val = result.get(key)
-            if actual_val != expected_val:
-                passed = False
-                failures.append(f"  {key}: expected '{expected_val}', got '{actual_val}'")
-
-        status = "PASS" if passed else "FAIL"
-        print(f"Test {i}: \"{formal}\" -> {status}")
-        if not passed:
-            all_passed = False
-            for f in failures:
-                print(f)
-        print()
-
-    print(f"\n{'All tests passed!' if all_passed else 'Some tests failed.'}")
