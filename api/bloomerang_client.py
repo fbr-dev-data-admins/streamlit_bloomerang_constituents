@@ -36,7 +36,7 @@ class BloomerangClient:
 
         self.session = requests.Session()
         self.session.headers.update({
-            "Authorization": f"Basic {api_key}:",
+            "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"
         })
 
