@@ -9,7 +9,7 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://api.bloomerang.com/v2"
+BASE_URL = "https://api.bloomerang.co/v2"
 
 
 class BloomerangAPIError(Exception):
