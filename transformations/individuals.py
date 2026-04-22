@@ -59,7 +59,7 @@ def flatten_constituent(raw: dict, config: dict) -> dict:
     flat["FirstName"] = raw.get("FirstName", "")
     flat["LastName"] = raw.get("LastName", "")
 
-    address = raw.get("Address")
+    address = raw.get("PrimaryAddress")
     if not address:
         addresses = raw.get("Addresses", [])
         if addresses:
