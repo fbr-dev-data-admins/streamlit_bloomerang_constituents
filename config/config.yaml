@@ -1,0 +1,84 @@
+# Group names to exclude (case-insensitive match against GroupsDetails[].Name on each constituent)
+# Constituents who are members of any of these groups will be excluded from all output files
+excluded_groups:
+  - "Facebook Leads"
+
+# Bloomerang "Supporter Type" custom field value -> output value mapping
+# Key = value as it appears in Bloomerang CustomFields["Supporter Type"]
+# Value = what to write to the output Excel file
+# If a value is not in this mapping, it is passed through as-is
+supporter_type_mapping:
+  "Individual": "Individual"
+  "Organization": "Organization"
+
+# Name parsing: prefixes/titles to strip before parsing individual names
+name_prefixes:
+  - "Dr."
+  - "Dr"
+  - "Mr."
+  - "Mr"
+  - "Mrs."
+  - "Mrs"
+  - "Ms."
+  - "Ms"
+  - "Miss"
+  - "Rev."
+  - "Rev"
+  - "Prof."
+  - "Prof"
+  - "Hon."
+  = "Hon"
+  - "Capt."
+  - "Capt"
+  - "Maj."
+  - "Maj"
+  - "Col."
+  - "Col"
+  - "Gen."
+  - "Gen"
+  - "Sgt."
+  - "Sgt"
+  - "Cpl."
+  - "Col"
+
+# Name parsing: suffixes to strip before parsing individual names
+name_suffixes:
+  - "Jr."
+  - "Jr"
+  - "Sr."
+  - "Sr"
+  - "II"
+  - "III"
+  - "IV"
+  - "V"
+  - "Esq."
+  - "Ph.D."
+  - "PhD"
+  - "M.D."
+  - "MD"
+  - "J.D."
+  - "JD"
+  - "R.N."
+  - "RN"
+  - "CPA"
+
+# Name parsing: keywords that trigger an automatic exception for Individual records
+# Matched as whole words, case-insensitive
+name_exception_keywords:
+  - "Family"
+  - "Foundation"
+  - "Fund"
+  - "Trust"
+  - "Estate"
+  - "Group"
+  - "Committee"
+  - "Association"
+  - "Society"
+  - "Organization"
+  - "Ministry"
+  - "Ministries"
+  - "Church"
+  - "School"
+  - "Corp"
+  - "Inc"
+  - "LLC"
