@@ -33,7 +33,12 @@ INDIVIDUAL_OUTPUT_COLUMNS = [
     "Spouse Addressee",
     "Salutation",
     "Spouse Salutation",
-    "Data Source"
+    "Data Source",
+    # Raw name fields for reference
+    "Raw Full Name",
+    "Raw Formal Name",
+    "Raw Informal Name",
+    "Raw Envelope Name",
 ]
 
 
@@ -56,8 +61,10 @@ def flatten_constituent(raw: dict, config: dict) -> dict:
     flat["FormalName"] = raw.get("FormalName", "")
     flat["FullName"] = raw.get("FullName", "")
     flat["InformalName"] = raw.get("InformalName", "")
+    flat["EnvelopeName"] = raw.get("EnvelopeName", "")
     flat["FirstName"] = raw.get("FirstName", "")
     flat["LastName"] = raw.get("LastName", "")
+    flat["Prefix"] = raw.get("Prefix", "")
 
     address = raw.get("PrimaryAddress")
     if not address:
@@ -181,13 +188,15 @@ def transform_individuals(
                     create_exception_record(raw, flat, "Unparseable Name")
                 )
                 continue
-            # temporary
-            logger.warning(f"Parsing: formal='{name_source}' informal='{flat.get('InformalName', '')}'")
-            
+
             parse_result = parse_individual_name(
                 name_source,
                 flat.get("InformalName", ""),
-                config
+                config,
+                envelope_name=flat.get("EnvelopeName", ""),
+                raw_first=flat.get("FirstName", ""),
+                raw_last=flat.get("LastName", ""),
+                raw_prefix=flat.get("Prefix", "")
             )
 
             if parse_result["parse_exception"]:
@@ -239,6 +248,13 @@ def transform_individuals(
                 row["Spouse Salutation"] = ""
 
             row["Data Source"] = "Bloomerang"
+
+            # Raw name fields appended for reference/QC
+            row["Raw Full Name"] = flat.get("FullName", "")
+            row["Raw Formal Name"] = flat.get("FormalName", "")
+            row["Raw Informal Name"] = flat.get("InformalName", "")
+            row["Raw Envelope Name"] = flat.get("EnvelopeName", "")
+            
 
             transformed_rows.append(row)
 
