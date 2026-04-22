@@ -37,8 +37,9 @@ class BloomerangClient:
     
         self.session = requests.Session()
         self.session.headers.update({
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
+            "X-API-KEY": api_key,
+            "Content-Type": "application/json",
+            "accept": "application/json"
         })
 
     def _request_with_retry(
