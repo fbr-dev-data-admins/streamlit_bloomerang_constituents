@@ -179,7 +179,7 @@ def main():
     if not check_password():
         st.stop()
 
-    st.title("Bloomerang Constituents --> RE")
+    st.title("🌱 Bloomerang Constituents --> RE")
 
     try:
         config = load_config()
