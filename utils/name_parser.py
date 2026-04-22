@@ -146,8 +146,11 @@ def parse_individual_name(formal_name: str, informal_name: str, config: dict) ->
         else:
             result["nickname"] = informal
             result["spouse_nickname"] = ""
-
-    return result
+    
+    # If informal revealed a spouse but formal was parsed as solo, derive spouse fields
+    if result["spouse_nickname"] and not result["spouse_first_name"]:
+        result["spouse_first_name"] = result["spouse_nickname"]
+        result["spouse_last_name"] = result["last_name"]  # assume shared last name
 
 
 if __name__ == "__main__":
