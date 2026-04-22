@@ -128,7 +128,7 @@ class BloomerangClient:
                 "skip": skip,
                 "take": take,
                 "orderBy": "CreatedDate",
-                "orderDirection": "Asc"
+                "orderDirection": "Desc"
             }
             if constituent_type:
                 params["type"] = constituent_type
