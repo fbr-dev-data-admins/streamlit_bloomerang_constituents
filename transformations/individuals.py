@@ -182,7 +182,7 @@ def transform_individuals(
                 )
                 continue
             # temporary
-            logger.debug(f"Parsing: formal='{name_source}' informal='{flat.get('InformalName', '')}'")
+            logger.warning(f"Parsing: formal='{name_source}' informal='{flat.get('InformalName', '')}'")
             
             parse_result = parse_individual_name(
                 name_source,
