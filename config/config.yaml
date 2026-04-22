@@ -27,7 +27,7 @@ name_prefixes:
   - "Prof."
   - "Prof"
   - "Hon."
-  = "Hon"
+  - "Hon"
   - "Capt."
   - "Capt"
   - "Maj."
