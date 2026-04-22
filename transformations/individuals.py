@@ -181,7 +181,9 @@ def transform_individuals(
                     create_exception_record(raw, flat, "Unparseable Name")
                 )
                 continue
-
+            # temporary
+            logger.debug(f"Parsing: formal='{name_source}' informal='{flat.get('InformalName', '')}'")
+            
             parse_result = parse_individual_name(
                 name_source,
                 flat.get("InformalName", ""),
