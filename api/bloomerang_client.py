@@ -4,6 +4,7 @@ import logging
 import os
 import time
 from datetime import date, datetime
+import streamlit as st
 
 import requests
 
@@ -21,19 +22,19 @@ class BloomerangClient:
     """Client for interacting with the Bloomerang API v2."""
 
     def __init__(self):
-        """
-        Initialize the Bloomerang client.
-
-        Raises:
-            EnvironmentError: If BLOOMERANG_API_KEY is not set
-        """
-        api_key = os.environ.get("BLOOMERANG_API_KEY")
+        try:
+            api_key = st.secrets.get("BLOOMERANG_API_KEY")
+        except Exception:
+            api_key = None
+    
+        if not api_key:
+            api_key = os.environ.get("BLOOMERANG_API_KEY")
+    
         if not api_key:
             raise EnvironmentError(
-                "BLOOMERANG_API_KEY environment variable is not set. "
-                "Please set it to your Bloomerang v2 private API key."
+                "BLOOMERANG_API_KEY is not set in Streamlit secrets or environment variables."
             )
-
+    
         self.session = requests.Session()
         self.session.headers.update({
             "Authorization": f"Bearer {api_key}",
