@@ -3,7 +3,7 @@
 import logging
 import os
 import sys
-from datetime import date
+from datetime import date, timedelta
 
 import pandas as pd
 import streamlit as st
@@ -191,11 +191,11 @@ def main():
         st.header("Export Settings")
 
         today = date.today()
-        first_of_month = today.replace(day=1)
+        one_week_ago = today - timedelta(days=7)
 
         start_date = st.date_input(
             "Start Date",
-            value=first_of_month,
+            value = one_week_ago,
             max_value=today
         )
 
