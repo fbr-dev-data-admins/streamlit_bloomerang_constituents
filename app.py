@@ -34,6 +34,30 @@ def load_config() -> dict:
     with open(config_path, "r") as f:
         return yaml.safe_load(f)
 
+def check_password() -> bool:
+    """Returns True if the user has entered the correct password."""
+    if st.session_state.get("authenticated"):
+        return True
+
+    st.text_input(
+        "Password",
+        type="password",
+        key="password_input",
+        on_change=_verify_password
+    )
+    if st.session_state.get("password_wrong"):
+        st.error("Incorrect password")
+    return False
+
+
+def _verify_password():
+    correct = st.secrets.get("APP_PASSWORD", "")
+    if st.session_state.get("password_input") == correct:
+        st.session_state["authenticated"] = True
+        st.session_state["password_wrong"] = False
+    else:
+        st.session_state["authenticated"] = False
+        st.session_state["password_wrong"] = True
 
 def filter_by_groups(records: list[dict], excluded_groups: list[str]) -> tuple[list[dict], dict[str, int]]:
     """
@@ -147,12 +171,15 @@ def run_export(start_date: date, end_date: date, config: dict) -> dict:
 
 def main():
     st.set_page_config(
-        page_title="Bloomerang Constituent Export",
-        page_icon="📊",
+        page_title="Bloomerang Constituents --> RE",
+        page_icon="🌱",
         layout="wide"
     )
 
-    st.title("Bloomerang Constituent Export")
+    if not check_password():
+        st.stop()
+
+    st.title("Bloomerang Constituents --> RE")
 
     try:
         config = load_config()
