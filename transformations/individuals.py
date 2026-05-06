@@ -25,9 +25,9 @@ INDIVIDUAL_OUTPUT_COLUMNS = [
     "Home State",
     "Home ZIP",
     "Country",
-    "Email Type",
+    #"Email Type",
     "Home Email",
-    "Phone Type",
+    #"Phone Type",
     "Home Phone",
     "Addressee",
     "Spouse Addressee",
@@ -222,10 +222,10 @@ def transform_individuals(
             row["Home ZIP"] = flat["Home ZIP"]
             row["Country"] = flat["Country"]
 
-            row["Email Type"] = "E-mail" if flat["Home Email"] else ""
+            #row["Email Type"] = "E-mail" if flat["Home Email"] else ""
             row["Home Email"] = flat["Home Email"]
 
-            row["Phone Type"] = "Primary Phone" if flat["Home Phone"] else ""
+            #row["Phone Type"] = "Primary Phone" if flat["Home Phone"] else ""
             row["Home Phone"] = flat["Home Phone"]
 
             spouse_first = parse_result["spouse_first_name"]
